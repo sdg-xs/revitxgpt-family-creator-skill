@@ -1,0 +1,4 @@
+interface:
+  display_name: "Revit Family Creator"
+  short_description: "Create realistic Revit families through Dynamo"
+  default_prompt: "Use $revit-family-creator to create one realistic Revit family and one type from these product references, delivered as a connected Dynamo graph."

@@ -1,0 +1,373 @@
+{
+  "Uuid": "2aec722eb6334ad49d0131603c46e9d9",
+  "IsCustomNode": false,
+  "Description": "One family/type. Functional assembly refinement: coherent crank/linkage joints, saddle mounting, fan clearance, console support and open pedals. 1300x610x1240 mm. Inferred details are visual approximations.",
+  "Name": "Assault_Fitness_AirBike_Pro_X_Revit2027_Functional",
+  "ElementResolver": {
+    "ResolutionMap": {}
+  },
+  "Inputs": [],
+  "Outputs": [],
+  "Nodes": [
+    {
+      "ConcreteType": "CoreNodeModels.Input.Directory, CoreNodeModels",
+      "Id": "edaedbde57da46868934746b51811062",
+      "NodeType": "ExtensionNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "53ed83b837ba4ae5a8ee7239c646c903",
+          "Name": "",
+          "Description": "Directory path",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Browse to the output folder for the saved RFA.",
+      "HintPath": "",
+      "InputValue": ""
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.Directory, CoreNodeModels",
+      "Id": "0345dc06f34546d19b5485c92970483f",
+      "NodeType": "ExtensionNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "644e0481688c43c59dbfd1de7edc0d9e",
+          "Name": "",
+          "Description": "Directory path",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Browse to the directory containing Metric Generic Model.rft.",
+      "HintPath": "",
+      "InputValue": ""
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Input.BoolSelector, CoreNodeModels",
+      "Id": "04eaaa41d863492a86734b1e6b0aa1c4",
+      "NodeType": "BooleanInputNode",
+      "Inputs": [],
+      "Outputs": [
+        {
+          "Id": "27422d683ec6433d830c3c39a4dbc6a7",
+          "Name": "",
+          "Description": "Boolean",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "False previews. True creates and saves the family.",
+      "InputValue": false
+    },
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "Code": "\"\"\"One family/type, with a detailed AirBike visual model. Dimensions in mm.\nOverall size and black finish come from the supplied FDV PDF. Part sizes and\npositions below are approximations for visualization, not fabrication data.\nIN = [output_folder, generic_template_directory, create_family].\n\"\"\"\nimport math\nfrom pathlib import Path\n\nMODEL = 'Assault Fitness AirBike Pro X'\nTYPE = 'AirBike_Pro_X_1300x610x1240mm'\nFILE = 'Assault_Fitness_AirBike_Pro_X_Functional.rfa'\nSIZE = [1300.0, 610.0, 1240.0]\nRGB = [25, 25, 25]\n\n\ndef _reference_shapes():\n    specs = []\n    rubber, steel, red, screen = [14,14,14], [150,154,158], [190,35,35], [67,78,77]\n    def add(name, kind, color=None, **values):\n        values.update(name=name, kind=kind, color=color or RGB)\n        specs.append(values)\n    def box(name, center, size, color=None):\n        add(name,'box',color,center=center,size=size)\n    def tube(name,start,end,r,color=None):\n        add(name,'cylinder',color,start=start,end=end,size=r)\n    def bend(name,start,mid,end,r,color=None):\n        add(name,'sweep',color,start=start,mid=mid,end=end,size=r)\n    def polygon(name,points,axis,depth,color=None):\n        add(name,'polygon',color,points=points,axis=axis,depth=depth)\n    def hoop(name,y,r,inner,depth):\n        add(name,'ring',start=[350,y,420],end=[350,y+depth,420],size=r,inner=inner)\n    def capsule(name,x,y,z,half_length,r,depth):\n        if depth < 0:\n            y,depth=y+depth,-depth\n        points=[]\n        for cx, angles in ((x+half_length,range(-90,91,15)),(x-half_length,range(90,271,15))):\n            points.extend([[cx+r*math.cos(math.radians(a)),y,z+r*math.sin(math.radians(a))] for a in angles])\n        polygon(name,points,[0,1,0],depth)\n    def flat_bar(name,start,end,width,depth,color=None):\n        dx,dz=end[0]-start[0],end[2]-start[2]\n        length=math.sqrt(dx*dx+dz*dz)\n        nx,nz=-dz/length*width/2,dx/length*width/2\n        points=[[p[0]+sign*nx,p[1]-depth/2,p[2]+sign*nz]\n                for p,sign in ((start,-1),(end,-1),(end,1),(start,1))]\n        polygon(name,points,[0,1,0],depth,color)\n    def smooth_outline(outline,count=5):\n        result=[]\n        for i in range(len(outline)):\n            p0,p1,p2,p3=[outline[j%len(outline)] for j in (i-1,i,i+1,i+2)]\n            for step in range(count):\n                t=step/float(count)\n                result.append([0.5*(2*p1[k]+(-p0[k]+p2[k])*t+\n                    (2*p0[k]-5*p1[k]+4*p2[k]-p3[k])*t*t+\n                    (-p0[k]+3*p1[k]-3*p2[k]+p3[k])*t*t*t) for k in (0,1)])\n        return result\n    # Rounded stabilizers and four leveling feet; PDF overall width retained.\n    capsule('Front stabilizer',250,-305,62,38,24,610)\n    capsule('Rear stabilizer',1235,-250,62,41,24,500)\n    for x in (250,1235):\n        for side in (-1,1):\n            y=side*(265 if x==250 else 210)\n            tube('Leveling rubber foot',[x,y,0],[x,y,30],24,rubber)\n            tube('Leveling foot screw',[x,y,30],[x,y,44],10,steel)\n    for side in (-1,1):\n        tube('Front transport wheel',[250,side*282,42],[250,side*302,42],32,rubber)\n        tube('Transport wheel hub',[250,side*282,42],[250,side*302,42],13,steel)\n    flat_bar('Lower rectangular frame',[290,0,100],[1170,0,100],42,54)\n    flat_bar('Rear diagonal rectangular frame',[790,0,385],[1170,0,104],62,54)\n    flat_bar('Upper frame cross member',[770,0,425],[410,0,465],52,54)\n    # Manufacturer specifies a 27 inch fan; guard has clearance around blades.\n    for side in (-1,1):\n        hoop('Fan guard outer rim',side*96-2,350,345,4)\n        hoop('Fan guard bead',side*104-2,345,342,4)\n        # Shallow dished faces, with the central guards protruding toward the cranks.\n        for radius in range(92,339,12):\n            y=side*(102+39*(1-(radius/350.0)**2))\n            hoop('Dished fan guard ring',y-0.9,radius,radius-1.5,1.8)\n        for i in range(64):\n            a=2*math.pi*i/64\n            def point(r,y):\n                return [350+r*math.cos(a),side*y,420+r*math.sin(a)]\n            bend('Dished fan guard radial wire',point(89,138.5),point(217,126),point(345,103),1.15)\n    for i in range(8):\n        a=2*math.pi*i/8\n        points=[[350+r*math.cos(a+t),-24,420+r*math.sin(a+t)]\n                for r,t in ((80,0),(342.9,0.05),(342.9,0.21),(80,0.28))]\n        polygon('Fan steel blade',points,[0,1,0],48)\n    tube('Fan rotor hub',[350,-65,420],[350,65,420],77)\n    for side in (-1,1):\n        tube('Fan center cover',[350,side*132,420],[350,side*142,420],91)\n        tube('Fan bearing boss',[350,side*142,420],[350,side*153,420],27)\n    for i in range(48):\n        a=2*math.pi*i/48\n        tube('Fan perimeter wire',[350+346*math.cos(a),-102,420+346*math.sin(a)],\n             [350+346*math.cos(a),102,420+346*math.sin(a)],1.3)\n    cover=smooth_outline([(862,423),(889,369),(856,299),(748,206),\n        (679,190),(595,221),(565,280),(586,337),(675,363),(725,447),(796,468)])\n    shroud_sections=[[[730+(x-730)*scale,y,330+(z-330)*scale] for x,z in cover]\n                     for y,scale in ((-77,0.94),(-65,1.0),(65,1.0),(77,0.94))]\n    add('Contoured belt-drive enclosure','loft',sections=shroud_sections)\n    for side in (-1,1):\n        tube('Crank circular cover',[790,side*76,400],[790,side*83,400],93)\n        for i in range(5):\n            a=2*math.pi*i/5\n            tube('Drive cover screw',[790+82*math.cos(a),side*83,400+82*math.sin(a)],\n                 [790+82*math.cos(a),side*86,400+82*math.sin(a)],3.5,rubber)\n    tube('Crank hub',[790,-84,400],[790,84,400],58)\n    flat_bar('Rectangular seat post sleeve',[825,0,420],[897,0,740],63,56)\n    flat_bar('Chrome rectangular adjustable post',[885,0,700],[925,0,873],35,34,steel)\n    capsule('Seat fore-aft slider',949,-30,866,89,21,60)\n    tube('Seat adjustment knob',[871,-32,715],[871,-68,715],15,rubber)\n    tube('Fore-aft lock shaft',[989,0,845],[989,0,823],8,steel)\n    tube('Fore-aft adjustment knob',[989,0,805],[989,0,826],17,rubber)\n    for side in (-1,1):\n        y=side*28\n        tube('Saddle rail horizontal',[880,y,924],[978,y,924],5.5,steel)\n        bend('Saddle rail bend',[978,y,924],[1001,y,913],[1008,y,890],5.5,steel)\n        tube('Saddle slider clamp',[971,y,886],[1008,y,886],8)\n        for z in (763,786,809,832):\n            x=885+(z-700)*40/173.0\n            tube('Seat height index hole',[x,side*17,z],[x,side*18,z],3,rubber)\n    # Corresponding rounded outline sections create a beveled upholstered saddle.\n    outline=[(818,-24),(844,-38),(892,-46),(942,-102),(983,-115),(1027,-100),\n             (1047,-61),(1050,0),(1047,61),(1027,100),(983,115),(942,102),(892,46),(844,38),(818,24)]\n    # Periodic Catmull-Rom outline, sampled consistently across loft sections.\n    smooth=[]\n    for i in range(len(outline)):\n        p0,p1,p2,p3=[outline[j%len(outline)] for j in (i-1,i,i+1,i+2)]\n        for step in range(4):\n            t=step/4\n            smooth.append([0.5*((2*p1[k])+(-p0[k]+p2[k])*t+\n                (2*p0[k]-5*p1[k]+4*p2[k]-p3[k])*t*t+\n                (-p0[k]+3*p1[k]-3*p2[k]+p3[k])*t*t*t) for k in (0,1)])\n    sections=[[[935+(x-935)*scale,y*scale,z] for x,y in smooth]\n              for z,scale in ((917,0.85),(924,0.98),(938,1.0),(950,0.92),(955,0.72))]\n    add('Sculpted upholstered saddle','loft',rubber,sections=sections)\n    # Console mast uses an actual curved sweep, rather than joined straight bars.\n    tube('Console mast lower',[420,0,650],[500,0,940],23)\n    bend('Console mast curve',[500,0,940],[501,0,1010],[474,0,1070],23)\n    tube('Console mast upper',[474,0,1070],[420,0,1130],23)\n    def console_point(s,y,h):\n        return [430+0.85*s+0.5268*h,y,1177-0.5268*s+0.85*h]\n    def rounded_panel(length,width,r):\n        points=[]\n        for x,y,angle in ((length/2-r,width/2-r,0),(-length/2+r,width/2-r,90),\n                          (-length/2+r,-width/2+r,180),(length/2-r,-width/2+r,270)):\n            for step in range(7):\n                a=math.radians(angle+step*15)\n                points.append([x+r*math.cos(a),y+r*math.sin(a)])\n        return points\n    panel=rounded_panel(218,188,14)\n    add('Rounded inclined console housing','loft',sections=[\n        [console_point(x*scale,y*scale,h) for x,y in panel]\n        for h,scale in ((-32,0.91),(-24,1.0),(0,1.0))])\n    bezel=rounded_panel(139,145,9)\n    polygon('Console screen bezel',[console_point(x-20,y,0.5) for x,y in bezel],\n            [0.5268,0,0.85],2,rubber)\n    lcd=rounded_panel(121,126,5)\n    polygon('LCD glass',[console_point(x-20,y,2.6) for x,y in lcd],\n            [0.5268,0,0.85],1,screen)\n    for row in (67,88):\n        for y in (-59,-30,0,30,59):\n            tube('Console button',console_point(row,y,1),console_point(row,y,4),6,rubber)\n    # Bottle holder visible in the supplied photograph; open cup, no bottle.\n    add('Bottle holder','ring',start=[315,108,1108],end=[315,108,1240],size=38,inner=33)\n    tube('Bottle holder base',[315,108,1101],[315,108,1108],38)\n    flat_bar('Bottle holder bracket',[315,81,1156],[376,81,1156],24,12)\n    for side in (-1,1):\n        y=side*208\n        # Broad support plates, moving arms and smooth quarter-circle grip bends.\n        polygon('Front support plate',[[218,side*150,90],[300,side*150,83],\n            [444,side*150,418],[374,side*150,436]],[0,side,0],30)\n        tube('Handle arm',[407,y,395],[505,y,1087],16)\n        bend('Handle upper bend',[505,y,1087],[529.6,y,1126],[573.2,y,1141.2],16)\n        tube('Handle grip',[573.2,y,1141.2],[749,y,1141.2],18,rubber)\n        tube('Red handle accent',[478,y-17*side,970],[493,y-17*side,1038],3,red)\n        capsule('Handle linkage',590,side*182,382,177,19,side*18)\n        tube('Handle pivot',[407,side*151,400],[407,side*215,400],26)\n        tube('Handle pivot bolt',[407,side*215,400],[407,side*220,400],10,steel)\n        tube('Linkage rear pin',[767,side*175,382],[767,side*204,382],11,steel)\n        tube('Foot peg',[350,side*115,420],[350,side*202,420],15,rubber)\n        tube('Crank axle',[790,0,400],[790,side*152,400],17,steel)\n        px,pz=790+side*22,400-side*139\n        flat_bar('Flat steel crank arm',[790,side*152,400],[px,side*152,pz],25,16)\n        tube('Pedal spindle',[px,side*150,pz],[px,side*213,pz],8,steel)\n        box('Pedal body',[px,side*211,pz],[124,90,20],rubber)\n        for dx in (-48,48):\n            box('Pedal outer rail',[px+dx,side*211,pz+13],[12,90,6])\n        for dy in (-35,35):\n            box('Pedal end rail',[px,side*211+dy,pz+13],[108,12,6])\n    return specs\n\n\n\ndef shape_specs():\n    specs = _reference_shapes()\n    steel, rubber = [150,154,158], [14,14,14]\n    replace_names = {\n        'Lower rectangular frame','Handle linkage','Handle pivot','Handle pivot bolt',\n        'Linkage rear pin','Crank axle','Flat steel crank arm','Pedal spindle',\n        'Pedal body','Pedal outer rail','Pedal end rail','Seat adjustment knob',\n        'Saddle rail horizontal','Saddle rail bend','Saddle slider clamp',\n        'Fan rotor hub','Console mast upper','Console mast lower','Console mast curve','Upper frame cross member',\n    }\n    specs = [s for s in specs if s['name'] not in replace_names]\n    def add(name,kind,color=None,**values):\n        values.update(name=name,kind=kind,color=color or RGB)\n        specs.append(values)\n    def tube(name,start,end,r,color=None):\n        add(name,'cylinder',color,start=start,end=end,size=r)\n    def box(name,center,size,color=None):\n        add(name,'box',color,center=center,size=size)\n    def bar(name,start,end,width,depth,color=None):\n        dx,dz=end[0]-start[0],end[2]-start[2]\n        length=math.hypot(dx,dz)\n        nx,nz=-dz/length*width/2,dx/length*width/2\n        points=[[p[0]+sign*nx,p[1]-depth/2,p[2]+sign*nz]\n                for p,sign in ((start,-1),(end,-1),(end,1),(start,1))]\n        add(name,'polygon',color,points=points,axis=[0,1,0],depth=depth)\n\n    # A continuous base connects both stabilizers. Only the four feet meet z=0.\n    bar('Continuous base frame',[250,0,100],[1235,0,100],42,54)\n    for side in (-1,1):\n        bar('Frame beside fan',[770,side*170,425],[407,side*170,460],38,32)\n    bar('Console rear support',[770,0,425],[651,0,667],44,54)\n    tube('Fan rotor hub',[350,-65,420],[350,65,420],83)\n    tube('Fan axle',[350,-169,420],[350,169,420],16,steel)\n    # The belt shroud sits beside the rotor, rather than passing through its blades.\n    for spec in specs:\n        if spec['name']=='Contoured belt-drive enclosure':\n            for section in spec['sections']:\n                for point in section:\n                    point[1]=point[1]*0.30-179\n        elif spec['name']=='Front support plate':\n            for p in spec['points']:\n                if p[2]>400:\n                    p[2]+=65\n        elif spec['name']=='Handle arm':\n            spec['start'][2]=460\n    # Connect the side belt cover back to the crank housing.\n    tube('Drive cover crank collar',[790,-202,400],[790,-77,400],43)\n    tube('Drive cover upper mounting boss',[730,-155,440],[730,-64,440],10)\n\n    # The visible saddle rails connect to a clamp and to the underside of the seat.\n    for side in (-1,1):\n        y=side*28\n        tube('Saddle rail',[885,y,906],[980,y,906],5.5,steel)\n        add('Saddle rail return','sweep',steel,start=[980,y,906],mid=[1000,y,897],end=[1008,y,876],size=5.5)\n        box('Saddle rail attachment',[915,y,912],[60,18,14])\n        tube('Saddle clamp cross pin',[997,side*12,879],[997,side*40,879],8,steel)\n    box('Saddle clamp block',[997,0,881],[35,65,12])\n    tube('Seat height locking shaft',[891,-27,715],[891,-50,715],6,steel)\n    tube('Seat height locking knob',[891,-50,715],[891,-69,715],15,rubber)\n\n    # Attach the inclined console at its actual underside plane.\n    add('Continuous curved console mast','sweep',start=[655,0,660],mid=[505,0,945],end=[414.7228,0,1152.35],size=23)\n    def cp(s,y,h):\n        return [430+0.85*s+0.5268*h,y,1177-0.5268*s+0.85*h]\n    add('Console mounting plate','polygon',points=[cp(x,y,-33) for x,y in [(-30,-35),(30,-35),(30,35),(-30,35)]],\n        axis=[0.5268,0,0.85],depth=5)\n\n    # Each linkage joins a lower handle lever and the corresponding crank pin.\n    # Both crank arms share one axle and are 180 degrees apart in this static pose.\n    for side in (-1,1):\n        arm_y=side*208\n        crank_y=side*218\n        pivot=[407,arm_y,460]\n        crank=[790,crank_y,400]\n        pin=[790+side*22,crank_y,400-side*139]\n        # Intersect the lever-radius and linkage-length circles to obtain a\n        # compatible pose, using identical 135 mm levers and 430 mm rods.\n        dx,dz=pin[0]-pivot[0],pin[2]-pivot[2]\n        distance=math.hypot(dx,dz)\n        along=(135**2-430**2+distance**2)/(2*distance)\n        offset=math.sqrt(135**2-along**2)\n        lever=[pivot[0]+along*dx/distance+offset*dz/distance,arm_y,\n               pivot[2]+along*dz/distance-offset*dx/distance]\n        rotation=math.atan2(pivot[2]-lever[2],pivot[0]-lever[0])-math.atan2(627,98)\n        for spec in specs:\n            if spec['name'] in ('Handle arm','Handle upper bend','Handle grip','Red handle accent') and spec['start'][1]*side>0:\n                for key in ('start','mid','end'):\n                    if key in spec:\n                        p=spec[key]\n                        x,z=p[0]-pivot[0],p[2]-pivot[2]\n                        p[0]=pivot[0]+x*math.cos(rotation)-z*math.sin(rotation)\n                        p[2]=pivot[2]+x*math.sin(rotation)+z*math.cos(rotation)\n        bar('Handle lower lever',pivot,lever,32,18)\n        tube('Handle pivot shaft',[407,side*151,460],[407,side*228,460],19,steel)\n        tube('Handle pivot housing',[407,side*188,460],[407,side*224,460],28)\n        tube('Handle pivot cap',[407,side*224,460],[407,side*231,460],12,steel)\n        bar('Crank to handle connecting rod',[lever[0],crank_y,lever[2]],pin,23,14)\n        tube('Linkage handle pin',[lever[0],side*197,lever[2]],[lever[0],side*233,lever[2]],10,steel)\n        tube('Linkage crank pin',[pin[0],side*205,pin[2]],[pin[0],side*234,pin[2]],10,steel)\n        tube('Crank axle extension',[790,0,400],crank,17,steel)\n        bar('Opposed crank arm',crank,pin,25,16)\n        tube('Crank retaining cap',[790,side*226,400],[790,side*232,400],11,steel)\n        tube('Pedal spindle',pin,[pin[0],side*267,pin[2]],8,steel)\n        px,py,pz=pin[0],side*265,pin[2]\n        # An open platform pedal with tread bars shows its bearing/spindle relationship.\n        for dx in (-55,55):\n            box('Pedal side frame',[px+dx,py,pz],[14,70,20],rubber)\n        for dy in (-28,28):\n            box('Pedal end frame',[px,py+dy,pz],[110,14,20],rubber)\n        for dx in (-27,0,27):\n            box('Pedal tread bar',[px+dx,py,pz+4],[9,56,12])\n        tube('Pedal bearing barrel',[px,side*235,pz],[px,side*272,pz],12)\n    return specs\n\n\ndef template_file(folder, app):\n    if folder:\n        base = Path(str(folder))\n        for name in ('Metric Generic Model.rft', 'Generic Model.rft',\n                     'English/Metric Generic Model.rft', 'English/Generic Model.rft'):\n            path = base / name\n            if path.is_file():\n                return str(path.resolve())\n        raise FileNotFoundError('Select the folder containing Metric Generic Model.rft.')\n    return template_file(app.FamilyTemplatePath, app)\n\n\ndef make_solid(doc, spec, DB):\n    def xyz(values):\n        return DB.XYZ(*(DB.UnitUtils.ConvertToInternalUnits(float(v), DB.UnitTypeId.Millimeters) for v in values))\n    def mm(value):\n        return DB.UnitUtils.ConvertToInternalUnits(float(value), DB.UnitTypeId.Millimeters)\n    if spec['kind'] in ('sweep','loft'):\n        from System.Collections.Generic import List\n        profiles = List[DB.CurveLoop]()\n        if spec['kind'] == 'loft':\n            for section in spec['sections']:\n                points=[xyz(p) for p in section]\n                profile=DB.CurveLoop()\n                for i in range(len(points)):\n                    profile.Append(DB.Line.CreateBound(points[i],points[(i+1)%len(points)]))\n                profiles.Add(profile)\n            options=DB.SolidOptions(DB.ElementId.InvalidElementId,DB.ElementId.InvalidElementId)\n            solid=DB.GeometryCreationUtilities.CreateLoftGeometry(profiles,options)\n        else:\n            arc=DB.Arc.Create(xyz(spec['start']),xyz(spec['end']),xyz(spec['mid']))\n            path=DB.CurveLoop()\n            path.Append(arc)\n            origin=arc.GetEndPoint(0)\n            tangent=arc.ComputeDerivatives(0.0,True).BasisX.Normalize()\n            reference=DB.XYZ.BasisZ if abs(tangent.Z)<0.9 else DB.XYZ.BasisY\n            u=tangent.CrossProduct(reference).Normalize()\n            v=tangent.CrossProduct(u).Normalize()\n            profile=DB.CurveLoop()\n            profile.Append(DB.Arc.Create(origin,mm(spec['size']),0,math.pi,u,v))\n            profile.Append(DB.Arc.Create(origin,mm(spec['size']),math.pi,2*math.pi,u,v))\n            profiles.Add(profile)\n            solid=DB.GeometryCreationUtilities.CreateSweptGeometry(path,0,arc.GetEndParameter(0),profiles)\n        return DB.FreeFormElement.Create(doc,solid)\n    loop = DB.CurveArray()\n    if spec['kind'] == 'polygon':\n        points = [xyz(p) for p in spec['points']]\n        origin, axis, depth = points[0], DB.XYZ(*spec['axis']), mm(spec['depth'])\n        for i in range(len(points)):\n            loop.Append(DB.Line.CreateBound(points[i], points[(i+1) % len(points)]))\n    elif spec['kind'] == 'box':\n        x, y, z = spec['center']\n        sx, sy, sz = spec['size']\n        points = [xyz([x - sx/2, y - sy/2, z - sz/2]), xyz([x + sx/2, y - sy/2, z - sz/2]),\n                  xyz([x + sx/2, y + sy/2, z - sz/2]), xyz([x - sx/2, y + sy/2, z - sz/2])]\n        origin, axis, depth = points[0], DB.XYZ.BasisZ, mm(sz)\n        for i in range(4):\n            loop.Append(DB.Line.CreateBound(points[i], points[(i+1) % 4]))\n    else:\n        origin, end = xyz(spec['start']), xyz(spec['end'])\n        direction = end - origin\n        depth, axis = direction.GetLength(), direction.Normalize()\n        reference = DB.XYZ.BasisZ if abs(axis.Z) < 0.9 else DB.XYZ.BasisY\n        u = axis.CrossProduct(reference).Normalize()\n        v = axis.CrossProduct(u).Normalize()\n        if spec['kind'] in ('cylinder', 'ring'):\n            radius = mm(spec['size'])\n            loop.Append(DB.Arc.Create(origin, radius, 0.0, math.pi, u, v))\n            loop.Append(DB.Arc.Create(origin, radius, math.pi, 2*math.pi, u, v))\n        else:\n            half = mm(spec['size']) / 2\n            points = [origin + u.Multiply(a*half) + v.Multiply(b*half)\n                      for a, b in [(-1,-1), (1,-1), (1,1), (-1,1)]]\n            for i in range(4):\n                loop.Append(DB.Line.CreateBound(points[i], points[(i+1) % 4]))\n    profile = DB.CurveArrArray()\n    profile.Append(loop)\n    if spec['kind'] == 'ring':\n        inner = DB.CurveArray()\n        radius = mm(spec['inner'])\n        inner.Append(DB.Arc.Create(origin, radius, 0.0, math.pi, u, v))\n        inner.Append(DB.Arc.Create(origin, radius, math.pi, 2*math.pi, u, v))\n        profile.Append(inner)\n    plane = DB.SketchPlane.Create(doc, DB.Plane.CreateByNormalAndOrigin(axis, origin))\n    return doc.FamilyCreate.NewExtrusion(True, profile, plane, depth)\n\n\ndef run(output_folder, template_folder, create):\n    if not isinstance(create, bool):\n        raise ValueError('Use the Boolean input node.')\n    output = Path(str(output_folder)).expanduser().resolve() if output_folder else Path.home() / 'Documents/AirBike_Pro_X'\n    target = output / FILE\n    result = {'status': 'preview', 'model': MODEL, 'type': TYPE, 'category': 'Specialty Equipment',\n              'overall_dimensions_mm': SIZE, 'color_rgb': RGB, 'shape_specs': shape_specs(),\n              'output_file': str(target), 'modeling_basis': 'Astra revision from supplied image and manufacturer photographs. PDF overall dimensions retained; manufacturer page has conflicting dimension tables. 27 inch fan diameter from manufacturer. Other part dimensions approximated.'}\n    if not create:\n        return result\n    if target.exists():\n        raise FileExistsError('Existing RFA is preserved. Select a new output folder.')\n    import clr\n    clr.AddReference('RevitAPI')\n    clr.AddReference('RevitServices')\n    import Autodesk.Revit.DB as DB\n    from RevitServices.Persistence import DocumentManager\n    from RevitServices.Transactions import TransactionManager\n    uiapp = DocumentManager.Instance.CurrentUIApplication\n    if uiapp is None or str(uiapp.Application.VersionNumber).split('.')[0] != '2027':\n        raise ValueError('Run in Revit 2027.x.')\n    app = uiapp.Application\n    active = DocumentManager.Instance.CurrentDBDocument\n    if active is None or active.IsFamilyDocument:\n        raise ValueError('Launch Dynamo from an ordinary Revit project.')\n    template = template_file(template_folder, app)\n    TransactionManager.Instance.ForceCloseTransaction()\n    if active.IsModifiable:\n        raise RuntimeError('Close the active project transaction first.')\n    doc = app.NewFamilyDocument(template)\n    transaction = None\n    try:\n        if doc.OwnerFamily.FamilyCategory.Id != DB.Category.GetCategory(doc, DB.BuiltInCategory.OST_GenericModel).Id:\n            raise ValueError('Choose an empty non-hosted Generic Model template.')\n        host = doc.OwnerFamily.get_Parameter(DB.BuiltInParameter.FAMILY_HOSTING_BEHAVIOR)\n        if host is not None and host.AsInteger() != 0:\n            raise ValueError('Hosted templates are unsupported.')\n        if list(DB.FilteredElementCollector(doc).OfClass(DB.GenericForm)):\n            raise ValueError('Use a template without existing geometry.')\n        transaction = DB.Transaction(doc, 'Create AirBike Pro X')\n        if transaction.Start() != DB.TransactionStatus.Started:\n            raise RuntimeError('Family transaction could not start.')\n        category = DB.Category.GetCategory(doc, DB.BuiltInCategory.OST_SpecialityEquipment)\n        doc.OwnerFamily.FamilyCategory = category\n        vertical = doc.OwnerFamily.get_Parameter(DB.BuiltInParameter.FAMILY_ALWAYS_VERTICAL)\n        if vertical is not None and not vertical.IsReadOnly:\n            vertical.Set(1)\n        workplane = doc.OwnerFamily.get_Parameter(DB.BuiltInParameter.FAMILY_WORK_PLANE_BASED)\n        if workplane is not None and not workplane.IsReadOnly:\n            workplane.Set(0)\n        manager = doc.FamilyManager\n        wanted = next((t for t in manager.Types if t.Name == TYPE), None)\n        if wanted is None:\n            wanted = manager.NewType(TYPE)\n        for old in list(manager.Types):\n            if old.Name != TYPE:\n                manager.CurrentType = old\n                manager.DeleteCurrentType()\n        manager.CurrentType = wanted\n        for name, value in zip(('Length', 'Width', 'Height'), SIZE):\n            param = manager.AddParameter('AB_' + name, DB.GroupTypeId.Geometry, DB.SpecTypeId.Length, False)\n            manager.SetFormula(param, str(value) + ' mm')\n        model = manager.AddParameter('AB_Model', DB.GroupTypeId.Data, DB.SpecTypeId.String.Text, False)\n        manager.Set(model, MODEL)\n        material_param = manager.AddParameter('AB_HousingMaterial', DB.GroupTypeId.Materials, DB.SpecTypeId.Reference.Material, False)\n        material_id = DB.Material.Create(doc, 'AirBike_Black_25_25_25')\n        material = doc.GetElement(material_id)\n        material.UseRenderAppearanceForShading = False\n        material.Color = DB.Color(*RGB)\n        material.Transparency = 0\n        manager.Set(material_param, material_id)\n        materials={tuple(RGB): material_id}\n        for rgb in {tuple(s.get('color',RGB)) for s in result['shape_specs']}:\n            if rgb not in materials:\n                mid=DB.Material.Create(doc,'AirBike_Finish_'+'_'.join(str(c) for c in rgb))\n                mat=doc.GetElement(mid)\n                mat.UseRenderAppearanceForShading=False\n                mat.Color=DB.Color(*rgb)\n                mat.Transparency=0\n                materials[rgb]=mid\n        bodies = []\n        for shape in result['shape_specs']:\n            try:\n                body = make_solid(doc, shape, DB)\n            except Exception as error:\n                raise RuntimeError('Could not build '+shape['name']+': '+str(error))\n            material_slot=body.get_Parameter(DB.BuiltInParameter.MATERIAL_ID_PARAM)\n            rgb=tuple(shape.get('color',RGB))\n            if rgb==tuple(RGB):\n                manager.AssociateElementParameterToFamilyParameter(material_slot,material_param)\n            else:\n                material_slot.Set(materials[rgb])\n            bodies.append(body)\n        doc.Regenerate()\n        bounds = [body.get_BoundingBox(None) for body in bodies]\n        minimum = [min(getattr(b.Min, axis) for b in bounds) for axis in 'XYZ']\n        maximum = [max(getattr(b.Max, axis) for b in bounds) for axis in 'XYZ']\n        actual = [DB.UnitUtils.ConvertFromInternalUnits(b-a, DB.UnitTypeId.Millimeters)\n                  for a, b in zip(minimum, maximum)]\n        if any(abs(a-b) > 0.1 for a, b in zip(actual, SIZE)):\n            raise RuntimeError('Overall geometry size check failed: ' + str(actual))\n        if len(list(manager.Types)) != 1:\n            raise RuntimeError('Expected exactly one type.')\n        if transaction.Commit() != DB.TransactionStatus.Committed:\n            raise RuntimeError('Family transaction did not commit.')\n        output.mkdir(parents=True, exist_ok=True)\n        options = DB.SaveAsOptions()\n        options.OverwriteExistingFile = False\n        try:\n            doc.SaveAs(str(target), options)\n        finally:\n            options.Dispose()\n        result.update({'status': 'created', 'verified_dimensions_mm': actual,\n                       'warnings': [str(w.GetDescriptionText()) for w in doc.GetWarnings()]})\n        return result\n    finally:\n        if transaction is not None:\n            if transaction.GetStatus() == DB.TransactionStatus.Started:\n                transaction.RollBack()\n            transaction.Dispose()\n        doc.Close(False)\n\n\nif 'IN' in globals():\n    try:\n        OUT = run(IN[0], IN[1], IN[2])\n    except Exception as error:\n        OUT = {'status': 'failed', 'error': str(error)}\n",
+      "Engine": "PythonNet3",
+      "VariableInputPorts": true,
+      "Id": "3c0cd2f2026f432dbd090fe578275212",
+      "NodeType": "PythonScriptNode",
+      "Inputs": [
+        {
+          "Id": "25679ef42bf84f968bdb3356c352ceb8",
+          "Name": "outputFolder",
+          "Description": "IN[0]",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "89123398abc24309932d49adbd5156bf",
+          "Name": "genericTemplateFolder",
+          "Description": "IN[1]",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        },
+        {
+          "Id": "e02a7099d52345b396fd99dd4a8efb98",
+          "Name": "createFamily",
+          "Description": "IN[2]",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "13a9e07deae54d1f89eb813b371b1cc7",
+          "Name": "OUT",
+          "Description": "OUT",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Astra revision. One Specialty Equipment family and one fixed type; False previews, True creates."
+    },
+    {
+      "ConcreteType": "CoreNodeModels.Watch, CoreNodeModels",
+      "WatchWidth": 450.0,
+      "WatchHeight": 420.0,
+      "Id": "2757aef3c9cd4be6a76596add2946af7",
+      "NodeType": "ExtensionNode",
+      "Inputs": [
+        {
+          "Id": "f57e2d9d3e82469a978d52cd1e2635bd",
+          "Name": "",
+          "Description": "",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "004978357ff24ce68f9d2d9885bab934",
+          "Name": "",
+          "Description": "",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "Preview, saved paths and verification results."
+    },
+    {
+      "ConcreteType": "PythonNodeModels.PythonNode, PythonNodeModels",
+      "Id": "be9a1db85aa24f3b987464d615e89cdd",
+      "NodeType": "PythonScriptNode",
+      "Engine": "PythonNet3",
+      "VariableInputPorts": true,
+      "Inputs": [
+        {
+          "Id": "f7bc63f762a246619c69fc619ea76fdf",
+          "Name": "familyResult",
+          "Description": "familyResult",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "ff8b7fc620a84957850c167c36f9e26e",
+          "Name": "OUT",
+          "Description": "OUT",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Code": "import clr\nclr.AddReference('ProtoGeometry')\nclr.AddReference('DSCoreNodes')\nclr.AddReference('GeometryColor')\nfrom Autodesk.DesignScript.Geometry import Point, Vector, CoordinateSystem, Cuboid, Cylinder, Polygon, Arc, Circle, Solid\nfrom DSCore import Color\nfrom Modifiers import GeometryColor\n\n\ndef value(data, key):\n    return data.ValueAtKey(key) if hasattr(data, 'ValueAtKey') else data[key]\n\n\nOUT = []\ntry:\n    specs = value(IN[0], 'shape_specs')\n    rgb = value(IN[0], 'color_rgb')\nexcept (KeyError, TypeError):\n    specs = []\n    rgb = [25, 25, 25]\ncolor = Color.ByARGB(255, int(rgb[0]), int(rgb[1]), int(rgb[2]))\nfor spec in specs or []:\n    try:\n        part_rgb=value(spec,'color')\n    except KeyError:\n        part_rgb=rgb\n    color=Color.ByARGB(255,*[int(c) for c in part_rgb])\n    kind = value(spec, 'kind')\n    if kind == 'loft':\n        sections=[Polygon.ByPoints([Point.ByCoordinates(*[float(v) for v in p]) for p in section])\n                  for section in value(spec,'sections')]\n        geometry=Solid.ByLoft(sections)\n    elif kind == 'sweep':\n        start,mid,end=[Point.ByCoordinates(*[float(v) for v in value(spec,k)]) for k in ('start','mid','end')]\n        # Dynamo expects sequential points; Revit Arc.Create uses start/end/mid.\n        path=Arc.ByThreePoints(start,mid,end)\n        if path.EndPoint.DistanceTo(end) > 0.01:\n            raise ValueError('Arc endpoint mismatch: '+str(value(spec,'name')))\n        profile=Circle.ByCenterPointRadiusNormal(start,float(value(spec,'size')),path.TangentAtParameter(0.0))\n        geometry=Solid.BySweep(profile,path)\n    elif kind == 'polygon':\n        points = [Point.ByCoordinates(*[float(v) for v in p]) for p in value(spec, 'points')]\n        direction = Vector.ByCoordinates(*[float(v)*float(value(spec, 'depth')) for v in value(spec, 'axis')])\n        geometry = Polygon.ByPoints(points).ExtrudeAsSolid(direction)\n    elif kind == 'box':\n        center = Point.ByCoordinates(*[float(v) for v in value(spec, 'center')])\n        sx, sy, sz = [float(v) for v in value(spec, 'size')]\n        geometry = Cuboid.ByLengths(center, sx, sy, sz)\n    else:\n        start = Point.ByCoordinates(*[float(v) for v in value(spec, 'start')])\n        end = Point.ByCoordinates(*[float(v) for v in value(spec, 'end')])\n        size = float(value(spec, 'size'))\n        if kind in ('cylinder', 'ring'):\n            geometry = Cylinder.ByPointsRadius(start, end, size)\n            if kind == 'ring':\n                hole = Cylinder.ByPointsRadius(start, end, float(value(spec, 'inner')))\n                geometry = geometry.Difference(hole)\n        else:\n            direction = Vector.ByTwoPoints(start, end)\n            axis = direction.Normalized()\n            reference = Vector.ZAxis() if abs(axis.Z) < 0.9 else Vector.YAxis()\n            u = axis.Cross(reference).Normalized()\n            v = axis.Cross(u).Normalized()\n            midpoint = Point.ByCoordinates((start.X+end.X)/2, (start.Y+end.Y)/2, (start.Z+end.Z)/2)\n            cs = CoordinateSystem.ByOriginVectors(midpoint, u, v, axis)\n            geometry = Cuboid.ByLengths(cs, size, size, direction.Length)\n    OUT.append(GeometryColor.ByGeometryColor(geometry, color))\n",
+      "Description": "Black AirBike geometry from the same shape specifications used to create the Revit family."
+    },
+    {
+      "ConcreteType": "Watch3DNodeModels.Watch3D, Watch3DNodeModels",
+      "WatchWidth": 540.0,
+      "WatchHeight": 400.0,
+      "WasExecuted": false,
+      "Camera": {
+        "Name": "AirBike Pro X preview",
+        "EyeX": 2200.0,
+        "EyeY": -2200.0,
+        "EyeZ": 1600.0,
+        "LookX": -1550.0,
+        "LookY": 2200.0,
+        "LookZ": -980.0,
+        "UpX": 0.0,
+        "UpY": 0.0,
+        "UpZ": 1.0
+      },
+      "VariableInputPorts": true,
+      "Id": "40a0487873aa4f8bb6d1243c5ae8785d",
+      "NodeType": "ExtensionNode",
+      "Inputs": [
+        {
+          "Id": "3ffa979638734a61a50128d3dbae12ff",
+          "Name": "geometry",
+          "Description": "geometry",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Outputs": [
+        {
+          "Id": "de48e685a7ba4f6a98b5777d4a6d8928",
+          "Name": "geometry",
+          "Description": "geometry",
+          "UsingDefaultValue": false,
+          "Level": 2,
+          "UseLevels": false,
+          "KeepListStructure": false
+        }
+      ],
+      "Replication": "Disabled",
+      "Description": "AirBike Pro X geometry and black material preview."
+    }
+  ],
+  "Connectors": [
+    {
+      "Start": "53ed83b837ba4ae5a8ee7239c646c903",
+      "End": "25679ef42bf84f968bdb3356c352ceb8",
+      "Id": "f7ff93f0ad4b4dbaaacd631a1c64840f",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "644e0481688c43c59dbfd1de7edc0d9e",
+      "End": "89123398abc24309932d49adbd5156bf",
+      "Id": "29f5bd5e85a346a49d04f292427f0fc0",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "27422d683ec6433d830c3c39a4dbc6a7",
+      "End": "e02a7099d52345b396fd99dd4a8efb98",
+      "Id": "0844d189cce9438ebcd6812e62775aaf",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "13a9e07deae54d1f89eb813b371b1cc7",
+      "End": "f57e2d9d3e82469a978d52cd1e2635bd",
+      "Id": "f2911b5ea6de4f91990e013a9f9dab6d",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "13a9e07deae54d1f89eb813b371b1cc7",
+      "End": "f7bc63f762a246619c69fc619ea76fdf",
+      "Id": "1c1a8b74c6c34d42ab450772438c4d7b",
+      "IsHidden": "False"
+    },
+    {
+      "Start": "ff8b7fc620a84957850c167c36f9e26e",
+      "End": "3ffa979638734a61a50128d3dbae12ff",
+      "Id": "1c078978a31b4f17b751f89f3feb3bdc",
+      "IsHidden": "False"
+    }
+  ],
+  "Dependencies": [],
+  "NodeLibraryDependencies": [],
+  "Bindings": [],
+  "View": {
+    "Dynamo": {
+      "ScaleFactor": 1.0,
+      "HasRunWithoutCrash": false,
+      "IsVisibleInDynamoLibrary": true,
+      "Version": "4.0.2",
+      "RunType": "Manual",
+      "RunPeriod": "1000"
+    },
+    "Camera": {
+      "Name": "Background Preview",
+      "EyeX": 10.0,
+      "EyeY": 10.0,
+      "EyeZ": 10.0,
+      "LookX": -10.0,
+      "LookY": -10.0,
+      "LookZ": -10.0,
+      "UpX": 0.0,
+      "UpY": 0.0,
+      "UpZ": 1.0
+    },
+    "NodeViews": [
+      {
+        "Id": "edaedbde57da46868934746b51811062",
+        "Name": "Output folder - Directory Path",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": false,
+        "X": 0,
+        "Y": 0
+      },
+      {
+        "Id": "0345dc06f34546d19b5485c92970483f",
+        "Name": "Generic template folder - Directory Path",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": false,
+        "X": 0,
+        "Y": 170
+      },
+      {
+        "Id": "04eaaa41d863492a86734b1e6b0aa1c4",
+        "Name": "Create family - False preview / True save",
+        "IsSetAsInput": true,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": false,
+        "X": 0,
+        "Y": 340
+      },
+      {
+        "Id": "3c0cd2f2026f432dbd090fe578275212",
+        "Name": "Create AirBike Pro X - functional assembly",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": false,
+        "X": 550,
+        "Y": 50
+      },
+      {
+        "Id": "2757aef3c9cd4be6a76596add2946af7",
+        "Name": "Result",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": false,
+        "X": 980,
+        "Y": -100
+      },
+      {
+        "Id": "be9a1db85aa24f3b987464d615e89cdd",
+        "Name": "Colored geometry preview",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 550,
+        "Y": 380
+      },
+      {
+        "Id": "40a0487873aa4f8bb6d1243c5ae8785d",
+        "Name": "Watch 3D - AirBike Pro X",
+        "IsSetAsInput": false,
+        "IsSetAsOutput": false,
+        "Excluded": false,
+        "ShowGeometry": true,
+        "X": 980,
+        "Y": 400
+      }
+    ],
+    "Annotations": [],
+    "ConnectorPins": [],
+    "X": 50.0,
+    "Y": 50.0,
+    "Zoom": 0.8
+  }
+}
